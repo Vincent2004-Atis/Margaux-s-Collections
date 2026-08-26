@@ -300,6 +300,22 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 .notif-item-msg    { font-size: .78rem; color: #9d174d; }
 .notif-item-time   { font-size: .72rem; color: #f9a8c9; margin-top: 4px; }
 .notif-empty       { padding: 32px; text-align: center; color: #f9a8c9; font-size: .85rem; }
+
+/* ── New-conversation compose (added) ── */
+.chat-new-btn {
+  background: #fdf2f8; border: 1px solid #f9c8d8; color: #e75480;
+  font-size: .74rem; font-weight: 700; padding: 5px 10px;
+  border-radius: 8px; cursor: pointer; transition: background .15s;
+}
+.chat-new-btn:hover { background: #fce7f3; }
+.chat-empty-cta {
+  padding: 28px 20px; text-align: center;
+}
+.chat-empty-cta-btn {
+  margin-top: 10px; background: linear-gradient(135deg,#f9b8cc,#e75480);
+  color: #fff; border: none; border-radius: 9px; padding: 9px 18px;
+  font-weight: 700; font-size: .82rem; cursor: pointer;
+}
 </style>
 
 <nav class="navbar">
@@ -450,9 +466,42 @@ $isOrderActive    = $currentPage === 'my_orders.php';
       <div style="padding:12px 16px;border-bottom:1px solid #fce7f3;
                   display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:.82rem;font-weight:700;color:#4a0020;">Your Messages</span>
+        <button type="button" class="chat-new-btn" onclick="chatShowNewForm()">+ New</button>
       </div>
       <div id="chatConvoList" style="max-height:280px;overflow-y:auto;">
         <div style="padding:20px;text-align:center;color:#f9a8c9;font-size:.82rem;">Loading...</div>
+      </div>
+    </div>
+
+    <!-- View: New conversation compose -->
+    <div id="chatViewNew" style="display:none;">
+      <div style="padding:10px 16px;border-bottom:1px solid #fce7f3;
+                  display:flex;align-items:center;gap:8px;">
+        <button type="button" onclick="chatShowList()"
+          style="background:none;border:none;color:#e75480;font-size:.8rem;cursor:pointer;padding:0;">← Back</button>
+        <span style="font-size:.82rem;font-weight:700;color:#4a0020;">New Message</span>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:.72rem;font-weight:700;color:#9d174d;display:block;margin-bottom:4px;">
+            Subject (optional)
+          </label>
+          <input id="newChatSubject" type="text" placeholder="e.g. Order inquiry"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #f9c8d8;
+                   border-radius:9px;font-family:inherit;font-size:.82rem;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;color:#9d174d;display:block;margin-bottom:4px;">
+            Message
+          </label>
+          <textarea id="newChatMessage" rows="4" placeholder="How can we help you?"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #f9c8d8;
+                   border-radius:9px;font-family:inherit;font-size:.82rem;outline:none;resize:vertical;"></textarea>
+        </div>
+        <button type="button" id="newChatSendBtn" onclick="chatSendNew()"
+          style="background:linear-gradient(135deg,#f9b8cc,#e75480);color:#fff;
+                 border:none;border-radius:9px;padding:10px 14px;
+                 font-weight:700;font-size:.84rem;cursor:pointer;">Send Message</button>
       </div>
     </div>
 
@@ -586,19 +635,62 @@ function escHtml(str) {
     const win = document.getElementById('chatWindow');
     win.style.display = chatIsOpen ? 'block' : 'none';
     document.getElementById('chatBubbleIcon').textContent = chatIsOpen ? '✕' : '💬';
-    if (chatIsOpen) chatLoadConvos();
+    if (chatIsOpen) chatShowList();
   };
 
   window.chatShowList = function () {
     clearInterval(chatPollTimer); chatActiveCid = null;
     document.getElementById('chatViewList').style.display   = 'block';
+    document.getElementById('chatViewNew').style.display    = 'none';
     document.getElementById('chatViewThread').style.display = 'none';
     chatLoadConvos();
+  };
+
+  // ── New: show the "start a new conversation" compose form ─────
+  window.chatShowNewForm = function () {
+    clearInterval(chatPollTimer); chatActiveCid = null;
+    document.getElementById('chatViewList').style.display   = 'none';
+    document.getElementById('chatViewThread').style.display = 'none';
+    document.getElementById('chatViewNew').style.display    = 'block';
+    document.getElementById('newChatSubject').value = '';
+    document.getElementById('newChatMessage').value = '';
+    document.getElementById('newChatMessage').focus();
+  };
+
+  // ── New: submit the first message, which creates the conversation ─
+  window.chatSendNew = async function () {
+    const subjectInput = document.getElementById('newChatSubject');
+    const msgInput      = document.getElementById('newChatMessage');
+    const btn           = document.getElementById('newChatSendBtn');
+    const msg     = msgInput.value.trim();
+    const subject = subjectInput.value.trim() || 'General Inquiry';
+
+    if (!msg) { msgInput.focus(); return; }
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Sending…';
+
+    try {
+      const data = await chatPost({ action: 'start_conversation', subject: subject, message: msg });
+      if (data.success && data.conversation_id) {
+        await chatOpenThread(data.conversation_id, subject);
+      } else {
+        alert('Could not send message: ' + (data.message || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
   };
 
   async function chatOpenThread(cid, subject) {
     chatActiveCid = cid;
     document.getElementById('chatViewList').style.display   = 'none';
+    document.getElementById('chatViewNew').style.display    = 'none';
     document.getElementById('chatViewThread').style.display = 'block';
     document.getElementById('threadTitle').textContent      = subject;
     const inp = document.getElementById('threadInput');
@@ -619,7 +711,13 @@ function escHtml(str) {
       const totalUnread = (data.conversations || []).reduce((s, c) => s + (parseInt(c.unread_count) || 0), 0);
       dot.textContent = totalUnread; dot.style.display = totalUnread > 0 ? 'inline' : 'none';
       if (!data.conversations || !data.conversations.length) {
-        list.innerHTML = `<div style="padding:28px 20px;text-align:center;"><div style="font-size:2rem;margin-bottom:8px;">💬</div><div style="font-weight:600;color:#4a0020;font-size:.85rem;margin-bottom:4px;">No messages yet</div></div>`;
+        list.innerHTML = `
+          <div class="chat-empty-cta">
+            <div style="font-size:2rem;margin-bottom:8px;">💬</div>
+            <div style="font-weight:600;color:#4a0020;font-size:.85rem;margin-bottom:4px;">No messages yet</div>
+            <div style="font-size:.76rem;color:#f9a8c9;">Send us a message and we'll get back to you.</div>
+            <button type="button" class="chat-empty-cta-btn" onclick="chatShowNewForm()">Start a conversation</button>
+          </div>`;
         return;
       }
       list.innerHTML = data.conversations.map(c => {

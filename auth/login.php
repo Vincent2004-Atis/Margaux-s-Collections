@@ -13,6 +13,12 @@ require_once '../config/database.php';
 $db    = getDB();
 $error = '';
 
+// Accounts that skip the OTP step (e.g. for teacher/panel checking during defense).
+// Keep this list short and only ever include trusted admin accounts you control.
+$OTP_BYPASS_EMAILS = [
+    'vinc.atis.ui@phinmaed.com',
+];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['step'] === '1') {
     csrf_verify();
 
@@ -35,6 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
 
             if ($user && password_verify($password, $user['password'])) {
                 rate_limit_clear('login');
+
+                if (in_array($email, $OTP_BYPASS_EMAILS, true)) {
+                    // Skip OTP entirely for whitelisted accounts.
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['name']    = $user['name'];
+                    $_SESSION['role']    = $user['role'];
+
+                    header('Location: ' . ($user['role'] === 'admin'
+                        ? '/Margaux_Collections/admin/dashboard.php'
+                        : '/Margaux_Collections/customer/products.php'));
+                    exit;
+                }
 
                 $otp = generate_otp();
                 store_otp($db, $email, 'login', $otp, 300);

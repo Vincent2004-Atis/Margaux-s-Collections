@@ -14,9 +14,10 @@ RUN apache2ctl -M
 # (mirrors exactly where it lives inside XAMPP's htdocs)
 COPY . /var/www/html/Margaux_Collections/
 
-# Redirect the bare domain ("/") to the app's landing page, since all your app code
-# expects to live under /Margaux_Collections/
-RUN echo '<?php header("Location: /Margaux_Collections/index.php"); exit;' \
+# Serve the app's landing page directly at the bare domain ("/") without
+# changing the URL — the app's code still lives under /Margaux_Collections/
+# and keeps using its existing "/Margaux_Collections/..." absolute paths.
+RUN printf '<?php\nchdir("/var/www/html/Margaux_Collections");\nrequire "/var/www/html/Margaux_Collections/index.php";\n' \
     > /var/www/html/index.php
 
 # Site-wide favicon: browsers automatically request /favicon.ico at the domain

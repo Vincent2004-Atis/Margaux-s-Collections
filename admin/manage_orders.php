@@ -72,6 +72,31 @@ $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// ── Fetch order items for every order currently shown ────────────────────
+// Grouped by order_id so each row/modal can look up its own items array
+// without running a query per row. Empty result set just leaves $itemsByOrder = [].
+$itemsByOrder = [];
+if (!empty($orders)) {
+    $orderIds = array_column($orders, 'order_id');
+    $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+    $itemTypes = str_repeat('i', count($orderIds));
+
+    $itemSql = "SELECT oi.order_id, oi.product_id, oi.quantity, oi.price, p.product_name
+                FROM order_items oi
+                JOIN products p ON p.product_id = oi.product_id
+                WHERE oi.order_id IN ($placeholders)
+                ORDER BY oi.item_id ASC";
+    $itemStmt = $db->prepare($itemSql);
+    $itemStmt->bind_param($itemTypes, ...$orderIds);
+    $itemStmt->execute();
+    $itemRows = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $itemStmt->close();
+
+    foreach ($itemRows as $ir) {
+        $itemsByOrder[$ir['order_id']][] = $ir;
+    }
+}
+
 $statusBadge = ['pending'=>'badge-amber','processing'=>'badge-blue','completed'=>'badge-green'];
 $payBadge    = ['pending'=>'badge-amber','pending_verification'=>'badge-blue','paid'=>'badge-green'];
 $payLabels   = ['cash_on_pickup'=>'💵 Cash Pickup','cash_on_delivery'=>'🏠 Cash Delivery','gcash'=>'📱 GCash','bank_transfer'=>'🏦 Cash On Delivery'];
@@ -82,17 +107,27 @@ $payStatusLabels = ['pending'=>'Pending','pending_verification'=>'For Verificati
  * Shared between the normal full-page load and the AJAX auto-filter
  * response, so the two never fall out of sync.
  */
-function renderOrdersTable(array $orders, array $statusBadge, array $payBadge, array $payLabels, array $payStatusLabels): void {
+function renderOrdersTable(array $orders, array $itemsByOrder, array $statusBadge, array $payBadge, array $payLabels, array $payStatusLabels): void {
 ?>
 <table>
-  <thead><tr><th>Customer</th><th>Method</th><th>Payment</th><th>Total</th><th>Order Status</th><th>Pay Status</th><th>Date</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Customer</th><th>Items</th><th>Method</th><th>Payment</th><th>Total</th><th>Order Status</th><th>Pay Status</th><th>Date</th><th>Actions</th></tr></thead>
   <tbody>
     <?php if (empty($orders)): ?>
-    <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-3);">No orders found.</td></tr>
+    <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-3);">No orders found.</td></tr>
     <?php endif; ?>
     <?php foreach ($orders as $o): ?>
+    <?php $items = $itemsByOrder[$o['order_id']] ?? []; ?>
     <tr>
       <td><div style="font-weight:600;"><?= e($o['uname']) ?></div><div style="font-size:.75rem;color:var(--text-3);"><?= e($o['contact_number']) ?></div></td>
+      <td style="font-size:.8rem;max-width:220px;">
+        <?php if (empty($items)): ?>
+          <span style="color:var(--text-3);">No items on file</span>
+        <?php else: ?>
+          <?php foreach ($items as $it): ?>
+            <div><?= e($it['product_name']) ?> <span style="color:var(--text-3);">×<?= (int)$it['quantity'] ?></span></div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </td>
       <td><?= $o['order_method']==='pickup'?' PICKUP':' SHIPPING' ?></td>
       <td style="font-size:.82rem;">
         <?= $payLabels[$o['payment_method']]??e($o['payment_method']) ?>
@@ -104,7 +139,13 @@ function renderOrdersTable(array $orders, array $statusBadge, array $payBadge, a
       <td><span class="badge <?= $statusBadge[$o['order_status']]??'badge-gray' ?>"><?= ucfirst(e($o['order_status'])) ?></span></td>
       <td><span class="badge <?= $payBadge[$o['payment_status']]??'badge-gray' ?>"><?= e($payStatusLabels[$o['payment_status']] ?? ucfirst($o['payment_status'])) ?></span></td>
       <td style="font-size:.78rem;"><?= date('M d, Y H:i', strtotime($o['order_date'])) ?></td>
-      <td><button class="btn btn-outline btn-sm" onclick="openEdit(<?= htmlspecialchars(json_encode($o), ENT_QUOTES) ?>)">✏️ Edit</button></td>
+      <td>
+        <?php
+          $modalData = $o;
+          $modalData['items'] = $items;
+        ?>
+        <button class="btn btn-outline btn-sm" onclick="openEdit(<?= htmlspecialchars(json_encode($modalData), ENT_QUOTES) ?>)">✏️ Edit</button>
+      </td>
     </tr>
     <?php endforeach; ?>
   </tbody>
@@ -119,7 +160,7 @@ function renderOrdersTable(array $orders, array $statusBadge, array $payBadge, a
 if (isset($_GET['ajax'])) {
     header('Content-Type: application/json');
     ob_start();
-    renderOrdersTable($orders, $statusBadge, $payBadge, $payLabels, $payStatusLabels);
+    renderOrdersTable($orders, $itemsByOrder, $statusBadge, $payBadge, $payLabels, $payStatusLabels);
     $tableHtml = ob_get_clean();
     echo json_encode([
         'count' => count($orders),
@@ -179,7 +220,7 @@ if (isset($_GET['ajax'])) {
       </form>
       <div class="card">
         <div class="table-wrap" id="ordersTableWrap">
-          <?php renderOrdersTable($orders, $statusBadge, $payBadge, $payLabels, $payStatusLabels); ?>
+          <?php renderOrdersTable($orders, $itemsByOrder, $statusBadge, $payBadge, $payLabels, $payStatusLabels); ?>
         </div>
       </div>
     </div>
@@ -204,6 +245,12 @@ if (isset($_GET['ajax'])) {
         <div class="form-group">
           <label class="form-label">Address</label>
           <textarea id="editAddress" class="form-control" rows="2" disabled></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Items Ordered</label>
+          <div id="editItemsList" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.85rem;max-height:180px;overflow-y:auto;">
+            <!-- populated by JS -->
+          </div>
         </div>
         <div class="form-group" id="editGcashRefGroup" style="display:none;">
           <label class="form-label">📱 GCash Reference No.</label>
@@ -239,6 +286,12 @@ if (isset($_GET['ajax'])) {
   </div>
 </div>
 <script>
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str ?? '';
+  return d.innerHTML;
+}
+
 function openEdit(order) {
   document.getElementById('modalOrderId').textContent  = '#'+order.order_id;
   document.getElementById('editOrderId').value         = order.order_id;
@@ -246,6 +299,20 @@ function openEdit(order) {
   document.getElementById('editAddress').value         = order.address;
   document.getElementById('editOrderStatus').value     = order.order_status;
   document.getElementById('editPayStatus').value       = order.payment_status;
+
+  const itemsList = document.getElementById('editItemsList');
+  const items = order.items || [];
+  if (items.length === 0) {
+    itemsList.innerHTML = '<span style="color:var(--text-3);">No items on file for this order.</span>';
+  } else {
+    itemsList.innerHTML = items.map(function (it) {
+      const lineTotal = (parseFloat(it.price) * parseInt(it.quantity, 10)).toFixed(2);
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'
+        + '<span>' + escapeHtml(it.product_name) + ' <span style="color:var(--text-3);">×' + parseInt(it.quantity, 10) + '</span></span>'
+        + '<span>₱' + lineTotal + '</span>'
+        + '</div>';
+    }).join('');
+  }
 
   const refGroup = document.getElementById('editGcashRefGroup');
   const refInput = document.getElementById('editGcashRef');

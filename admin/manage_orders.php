@@ -81,7 +81,7 @@ if (!empty($orders)) {
     $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
     $itemTypes = str_repeat('i', count($orderIds));
 
-    $itemSql = "SELECT oi.order_id, oi.product_id, oi.quantity, oi.price, p.product_name
+    $itemSql = "SELECT oi.order_id, oi.product_id, oi.quantity, oi.price, p.product_name, p.image
                 FROM order_items oi
                 JOIN products p ON p.product_id = oi.product_id
                 WHERE oi.order_id IN ($placeholders)
@@ -124,7 +124,13 @@ function renderOrdersTable(array $orders, array $itemsByOrder, array $statusBadg
           <span style="color:var(--text-3);">No items on file</span>
         <?php else: ?>
           <?php foreach ($items as $it): ?>
-            <div><?= e($it['product_name']) ?> <span style="color:var(--text-3);">×<?= (int)$it['quantity'] ?></span></div>
+            <?php $imgSrc = '../' . ($it['image'] ?: 'images/product-placeholder.jpg'); ?>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <img src="<?= e($imgSrc) ?>" alt="<?= e($it['product_name']) ?>"
+                   style="width:32px;height:32px;object-fit:cover;border-radius:6px;cursor:pointer;flex-shrink:0;border:1px solid var(--border);"
+                   onclick="openImageLightbox('<?= e($imgSrc) ?>', '<?= e(addslashes($it['product_name'])) ?>')">
+              <span><?= e($it['product_name']) ?> <span style="color:var(--text-3);">×<?= (int)$it['quantity'] ?></span></span>
+            </div>
           <?php endforeach; ?>
         <?php endif; ?>
       </td>
@@ -248,7 +254,7 @@ if (isset($_GET['ajax'])) {
         </div>
         <div class="form-group">
           <label class="form-label">Items Ordered</label>
-          <div id="editItemsList" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.85rem;max-height:180px;overflow-y:auto;">
+          <div id="editItemsList" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.85rem;max-height:220px;overflow-y:auto;">
             <!-- populated by JS -->
           </div>
         </div>
@@ -285,7 +291,26 @@ if (isset($_GET['ajax'])) {
     </form>
   </div>
 </div>
+
+<div class="modal-overlay" id="imageLightbox" onclick="closeImageLightbox()" style="cursor:zoom-out;">
+  <div style="max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;gap:10px;" onclick="event.stopPropagation()">
+    <img id="lightboxImg" src="" alt="" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);">
+    <div id="lightboxCaption" style="color:#fff;font-size:.9rem;"></div>
+    <button type="button" class="btn btn-outline btn-sm" onclick="closeImageLightbox()">✕ Close</button>
+  </div>
+</div>
+
 <script>
+function openImageLightbox(src, caption) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightboxImg').alt = caption || '';
+  document.getElementById('lightboxCaption').textContent = caption || '';
+  document.getElementById('imageLightbox').classList.add('open');
+}
+function closeImageLightbox() {
+  document.getElementById('imageLightbox').classList.remove('open');
+}
+
 function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str ?? '';
@@ -307,8 +332,13 @@ function openEdit(order) {
   } else {
     itemsList.innerHTML = items.map(function (it) {
       const lineTotal = (parseFloat(it.price) * parseInt(it.quantity, 10)).toFixed(2);
-      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'
-        + '<span>' + escapeHtml(it.product_name) + ' <span style="color:var(--text-3);">×' + parseInt(it.quantity, 10) + '</span></span>'
+      const imgSrc = '../' + (it.image || 'images/product-placeholder.jpg');
+      const nameEsc = escapeHtml(it.product_name);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
+        + '<img src="' + imgSrc + '" alt="' + nameEsc + '" '
+        + 'style="width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;flex-shrink:0;border:1px solid var(--border);" '
+        + 'onclick="openImageLightbox(\'' + imgSrc.replace(/'/g, "\\'") + '\', \'' + nameEsc.replace(/'/g, "\\'") + '\')">'
+        + '<span style="flex:1;">' + nameEsc + ' <span style="color:var(--text-3);">×' + parseInt(it.quantity, 10) + '</span></span>'
         + '<span>₱' + lineTotal + '</span>'
         + '</div>';
     }).join('');

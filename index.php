@@ -26,6 +26,22 @@ $hpPrice += [
     'preowned'    => '',
     'accessories' => '',
 ];
+
+// Moved up so it's available for the hero "Pre-Loved" button as well as the mini category grid
+$isLoggedIn = isset($_SESSION['user_id']);
+$categories = [
+  ['label'=>'Dresses','sub'=>'Brand New','icon'=>'👗','slug'=>'dresses'],
+  ['label'=>'Tops & Blouses','sub'=>'Brand New','icon'=>'👚','slug'=>'tops'],
+  ['label'=>'Pre-Loved','sub'=>'Gently Used','icon'=>'♻️','slug'=>'Pre-Loved'],
+  ['label'=>'Accessories','sub'=>'Complete Look','icon'=>'👜','slug'=>'accessories'],
+];
+
+// Reusable helper: build the same login-gated link the mini category grid uses
+function catLink($slug, $isLoggedIn) {
+    return $isLoggedIn
+        ? 'customer/products.php?category=' . urlencode($slug)
+        : 'auth/register.php?redirect=' . urlencode('customer/products.php?category=' . $slug);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -335,7 +351,7 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
       <p class="hero-desc">Curated brand-new outfits and pre-loved designer pieces. Every dress tells a story — find yours. Affordable fashion with a luxury feel.</p>
       <div class="hero-btns">
         <a href="#shop" class="btn-rose">✦ Shop Now</a>
-        <a href="#preowned" class="btn-ghost">Pre-Loved →</a>
+        <a href="<?= catLink('Pre-Loved', $isLoggedIn) ?>" class="btn-ghost">Pre-Loved →</a>
       </div>
       <div class="hero-stats">
         
@@ -352,20 +368,8 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
         </div>
       </div>
       <div class="hero-mini-grid">
-        <?php
-        $isLoggedIn = isset($_SESSION['user_id']);
-        $categories = [
-          ['label'=>'Dresses','sub'=>'Brand New','icon'=>'👗','slug'=>'dresses'],
-          ['label'=>'Tops & Blouses','sub'=>'Brand New','icon'=>'👚','slug'=>'tops'],
-          ['label'=>'Pre-Loved','sub'=>'Gently Used','icon'=>'♻️','slug'=>'Pre-Loved'],
-          ['label'=>'Accessories','sub'=>'Complete Look','icon'=>'👜','slug'=>'accessories'],
-        ];
-        foreach($categories as $cat):
-          $href = $isLoggedIn
-            ? 'customer/products.php?category='.urlencode($cat['slug'])
-            : 'auth/register.php?redirect='.urlencode('customer/products.php?category='.$cat['slug']);
-        ?>
-        <a href="<?= $href ?>" class="mini-cat" title="<?= $cat['label'] ?>">
+        <?php foreach($categories as $cat): ?>
+        <a href="<?= catLink($cat['slug'], $isLoggedIn) ?>" class="mini-cat" title="<?= $cat['label'] ?>">
           <span class="mini-cat-icon"><?= $cat['icon'] ?></span>
           <div class="mini-cat-label"><?= $cat['label'] ?></div>
           <div class="mini-cat-sub"><?= $cat['sub'] ?></div>
@@ -403,7 +407,7 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
     </div>
     <div class="cats-grid reveal">
 
-      <div class="cat-card">
+      <a href="<?= catLink('dresses', $isLoggedIn) ?>" class="cat-card">
         <img src="<?= htmlspecialchars($hp['dresses']) ?>" alt="Dresses" onerror="this.style.background='linear-gradient(135deg,#261520,#3d1a28)';this.style.height='100%'">
         <div class="cat-overlay">
           <span class="cat-pill">Brand New</span>
@@ -411,9 +415,9 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
           <div class="cat-count"><?= htmlspecialchars($hpPrice['dresses'] ?: 'Starting at ₱299') ?></div>
        </div>
        <div class="cat-arrow">→</div>
-     </div>
+     </a>
 
-      <div class="cat-card">
+      <a href="<?= catLink('tops', $isLoggedIn) ?>" class="cat-card">
         <img src="<?= htmlspecialchars($hp['tops']) ?>" alt="Tops & Blouses" onerror="this.style.background='linear-gradient(135deg,#1c1318,#2e1622)';this.style.height='100%'">
         <div class="cat-overlay">
           <span class="cat-pill">Brand New</span>
@@ -421,9 +425,9 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
           <div class="cat-count"><?= htmlspecialchars($hpPrice['tops'] ?: 'Starting at ₱199') ?></div>
        </div>
        <div class="cat-arrow">→</div>
-     </div>
+     </a>
 
-      <div class="cat-card">
+      <a href="<?= catLink('Pre-Loved', $isLoggedIn) ?>" class="cat-card">
         <img src="<?= htmlspecialchars($hp['preowned']) ?>" alt="Pre-Loved" onerror="this.style.background='linear-gradient(135deg,#1a1508,#2e2410)';this.style.height='100%'">
         <div class="cat-overlay">
           <span class="cat-pill" style="background:linear-gradient(135deg,var(--gold),#a07830)">Pre-Loved</span>
@@ -431,9 +435,9 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
           <div class="cat-count"><?= htmlspecialchars($hpPrice['preowned'] ?: 'Starting at ₱499') ?></div>
        </div>
        <div class="cat-arrow">→</div>
-     </div>
+     </a>
 
-      <div class="cat-card">
+      <a href="<?= catLink('accessories', $isLoggedIn) ?>" class="cat-card">
         <img src="<?= htmlspecialchars($hp['accessories']) ?>" alt="Accessories" onerror="this.style.background='linear-gradient(135deg,#1c1318,#261520)';this.style.height='100%'">
         <div class="cat-overlay">
           <span class="cat-pill" style="background:rgba(255,255,255,.15);backdrop-filter:blur(6px)">Accessories</span>
@@ -441,7 +445,7 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
           <div class="cat-count"><?= htmlspecialchars($hpPrice['accessories'] ?: 'Starting at ₱99') ?></div>
        </div>
        <div class="cat-arrow">→</div>
-     </div>
+     </a>
     </div>
   </div>
 </section>

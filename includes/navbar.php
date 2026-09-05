@@ -98,6 +98,7 @@ $isOrderActive    = $currentPage === 'my_orders.php';
   font-family: 'Sora', sans-serif;
   font-weight: 800; font-size: .88rem;
   color: #ffffff; letter-spacing: .04em;
+  white-space: nowrap;
 }
 .brand-sub {
   font-size: .58rem; font-weight: 700;
@@ -105,7 +106,23 @@ $isOrderActive    = $currentPage === 'my_orders.php';
   text-transform: uppercase;
 }
 
-/* ── CENTER: Nav Links ── */
+/* ── Hamburger (mobile nav toggle) ── */
+.navbar-hamburger {
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 10px;
+  width: 38px; height: 38px;
+  cursor: pointer; color: #fff; font-size: 1.05rem;
+  flex-shrink: 0; transition: all 0.25s;
+}
+.navbar-hamburger:hover {
+  background: rgba(255,255,255,0.4);
+  border-color: rgba(255,255,255,0.7);
+}
+
+/* ── CENTER: Nav Links (desktop) ── */
 .navbar-nav {
   display: flex; align-items: center;
   list-style: none; margin: 0; padding: 0;
@@ -139,13 +156,33 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 }
 .nav-link.active::after { left: 14px; right: 14px; }
 
+/* ── Mobile off-canvas nav panel ── */
+.mobile-nav-panel {
+  display: none;
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: #2a0d14;
+  border-top: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  padding: 10px 16px 16px;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1050;
+}
+.mobile-nav-panel.open { display: flex; }
+.mobile-nav-panel .nav-link {
+  padding: 13px 14px;
+  font-size: .8rem;
+}
+.mobile-nav-panel .nav-link::after { display: none; }
+.mobile-nav-panel .nav-link.active { background: rgba(255,255,255,.15); }
+
 /* ── RIGHT: Search + Cart + Profile ── */
 .navbar-right {
   display: flex; align-items: center;
   gap: 8px; flex-shrink: 0;
 }
 
-/* Search */
+/* Search (desktop inline) */
 .navbar-search {
   display: flex; align-items: center;
   background: rgba(255,255,255,0.25);
@@ -171,6 +208,48 @@ $isOrderActive    = $currentPage === 'my_orders.php';
   transition: color 0.2s; line-height: 1;
 }
 .search-btn:hover { color: #fff; }
+
+/* Search toggle (mobile icon-only button) */
+.search-toggle-btn {
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 10px;
+  width: 38px; height: 38px;
+  cursor: pointer; color: #fff; font-size: 1rem;
+  flex-shrink: 0; transition: all 0.25s;
+}
+.search-toggle-btn:hover {
+  background: rgba(255,255,255,0.4);
+  border-color: rgba(255,255,255,0.7);
+}
+
+/* Mobile search dropdown panel */
+.mobile-search-panel {
+  display: none;
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: #2a0d14;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,.15);
+  z-index: 1050;
+}
+.mobile-search-panel.open { display: block; }
+.mobile-search-panel form {
+  display: flex; align-items: center;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 10px; overflow: hidden;
+}
+.mobile-search-panel input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: #fff; padding: 11px 14px; font-size: .85rem; font-family: inherit;
+}
+.mobile-search-panel input::placeholder { color: rgba(255,255,255,.6); }
+.mobile-search-panel button {
+  background: transparent; border: none; color: #fff;
+  padding: 10px 16px; cursor: pointer; font-size: .95rem;
+}
 
 /* Cart */
 .cart-btn {
@@ -316,10 +395,39 @@ $isOrderActive    = $currentPage === 'my_orders.php';
   color: #fff; border: none; border-radius: 9px; padding: 9px 18px;
   font-weight: 700; font-size: .82rem; cursor: pointer;
 }
+
+/* ══════════════════════════════════════
+   RESPONSIVE — MOBILE
+══════════════════════════════════════ */
+@media (max-width: 860px) {
+  .navbar-inner { padding: 0 14px; gap: 6px; }
+  .navbar-nav { display: none; }
+  .navbar-hamburger { display: flex; }
+  .navbar-search { display: none; }
+  .search-toggle-btn { display: flex; }
+  .navbar-right { gap: 6px; }
+  .cart-btn { padding: 8px 10px; }
+  .cart-label { display: none; }
+  .profile-btn { padding: 6px 8px; }
+  .profile-info { display: none; }
+  .profile-caret { display: none; }
+  .brand-name { font-size: .76rem; }
+  .navbar-brand img { width: 34px; height: 34px; }
+  .notif-dropdown { width: 280px; right: -60px; }
+  .notif-dropdown::before { content: none; }
+}
+@media (max-width: 380px) {
+  .brand-text { display: none; }
+}
 </style>
 
 <nav class="navbar">
   <div class="navbar-inner">
+
+    <!-- ── Mobile hamburger (nav links) ── -->
+    <button type="button" class="navbar-hamburger" id="navHamburger" onclick="toggleMobileMenu(event)" title="Menu">
+      ☰
+    </button>
 
     <!-- ── LEFT: Logo + Brand ── -->
     <a href="/Margaux_Collections/customer/products.php" class="navbar-brand">
@@ -332,7 +440,7 @@ $isOrderActive    = $currentPage === 'my_orders.php';
       </div>
     </a>
 
-    <!-- ── CENTER: Nav Links ── -->
+    <!-- ── CENTER: Nav Links (desktop only) ── -->
     <ul class="navbar-nav">
       <li>
         <a href="/Margaux_Collections/customer/products.php"
@@ -351,12 +459,17 @@ $isOrderActive    = $currentPage === 'my_orders.php';
     <!-- ── RIGHT: Search + Cart + Profile ── -->
     <div class="navbar-right">
 
-      <!-- Search -->
+      <!-- Search (desktop inline) -->
       <form method="GET" action="/Margaux_Collections/customer/products.php" class="navbar-search">
         <input type="text" name="search" placeholder="Search products..."
                value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
         <button type="submit" class="search-btn">🔍</button>
       </form>
+
+      <!-- Search toggle (mobile icon-only) -->
+      <button type="button" class="search-toggle-btn" id="searchToggleBtn" onclick="toggleMobileSearch(event)" title="Search">
+        🔍
+      </button>
 
       <!-- Notification Bell -->
       <div class="notif-wrapper" id="notifWrapper">
@@ -414,6 +527,27 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 
     </div><!-- /.navbar-right -->
   </div>
+
+  <!-- ── Mobile off-canvas nav panel (PRODUCTS / ORDER HISTORY) ── -->
+  <div class="mobile-nav-panel" id="mobileNavPanel">
+    <a href="/Margaux_Collections/customer/products.php"
+       class="nav-link <?= $isProductsActive ? 'active' : '' ?>">
+      PRODUCTS
+    </a>
+    <a href="/Margaux_Collections/customer/my_orders.php"
+       class="nav-link <?= $isOrderActive ? 'active' : '' ?>">
+      ORDER HISTORY
+    </a>
+  </div>
+
+  <!-- ── Mobile search panel ── -->
+  <div class="mobile-search-panel" id="mobileSearchPanel">
+    <form method="GET" action="/Margaux_Collections/customer/products.php">
+      <input type="text" name="search" placeholder="Search products..."
+             value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+      <button type="submit">🔍</button>
+    </form>
+  </div>
 </nav>
 
 <!-- ================================================================
@@ -440,7 +574,7 @@ $isOrderActive    = $currentPage === 'my_orders.php';
   <!-- Chat window -->
   <div id="chatWindow"
     style="display:none;position:absolute;bottom:70px;right:0;
-           width:350px;background:#fff;border-radius:18px;
+           width:350px;max-width:calc(100vw - 32px);background:#fff;border-radius:18px;
            box-shadow:0 16px 50px rgba(231,84,128,.2);
            border:1px solid #f9c8d8;overflow:hidden;">
 
@@ -541,6 +675,44 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 </style>
 
 <script>
+// ══════════════════════════════════════════════════════════════════
+//  MOBILE HAMBURGER MENU + MOBILE SEARCH
+// ══════════════════════════════════════════════════════════════════
+window.toggleMobileMenu = function (e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('mobileNavPanel');
+  const searchPanel = document.getElementById('mobileSearchPanel');
+  panel.classList.toggle('open');
+  searchPanel.classList.remove('open');
+};
+
+window.toggleMobileSearch = function (e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('mobileSearchPanel');
+  const navPanel = document.getElementById('mobileNavPanel');
+  panel.classList.toggle('open');
+  navPanel.classList.remove('open');
+  if (panel.classList.contains('open')) {
+    setTimeout(() => { const i = panel.querySelector('input'); if (i) i.focus(); }, 60);
+  }
+};
+
+document.addEventListener('click', function (e) {
+  const navPanel     = document.getElementById('mobileNavPanel');
+  const searchPanel  = document.getElementById('mobileSearchPanel');
+  const hamburger    = document.getElementById('navHamburger');
+  const searchToggle = document.getElementById('searchToggleBtn');
+
+  if (navPanel && navPanel.classList.contains('open') &&
+      !navPanel.contains(e.target) && hamburger && !hamburger.contains(e.target)) {
+    navPanel.classList.remove('open');
+  }
+  if (searchPanel && searchPanel.classList.contains('open') &&
+      !searchPanel.contains(e.target) && searchToggle && !searchToggle.contains(e.target)) {
+    searchPanel.classList.remove('open');
+  }
+});
+
 // ══════════════════════════════════════════════════════════════════
 //  PROFILE DROPDOWN
 // ══════════════════════════════════════════════════════════════════

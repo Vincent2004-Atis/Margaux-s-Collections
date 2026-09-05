@@ -30,7 +30,7 @@ Alias /Margaux_Collections /var/www/html/Margaux_Collections\n\
 # root for ANY page that doesn't declare its own <link rel="icon">, regardless
 # of how deep the page's own path is. Placing the logo here makes the tab icon
 # show up on every page (login, register, products, etc.) without editing each file.
-RUN cp /var/www/html/Margaux_Collections/images/logo.jpg /var/www/html/favicon.ico
+   RUN cp /var/www/html/Margaux_Collections/assets-backup/logo.jpg /var/www/html/favicon.ico
 
 # Give Apache write access to the folders the app writes to (profile photo
 # uploads, homepage slot images)

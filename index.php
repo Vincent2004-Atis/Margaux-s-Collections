@@ -363,7 +363,7 @@ footer{background:#05030a;color:rgba(255,255,255,.5);padding:68px 56px 36px;bord
         <div class="hero-img-overlay">
           <div>
             <div class="hero-img-label">New Arrivals — Summer 2026</div>
-            <div class="hero-img-sub">Brand New Collection · Starting ₱599</div>
+            <div class="hero-img-sub">Brand New Collection · Starting ₱199</div>
           </div>
         </div>
       </div>

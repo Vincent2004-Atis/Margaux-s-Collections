@@ -399,9 +399,13 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 /* ══════════════════════════════════════
    RESPONSIVE — MOBILE
 ══════════════════════════════════════ */
-/* Safety net: never let the navbar row force the page to scroll sideways */
+/* Safety net: never let the navbar row force the page to scroll sideways.
+   IMPORTANT: do NOT put overflow:hidden on .navbar/.navbar-inner — they
+   are the containing ancestors for the search panel, notif dropdown,
+   profile dropdown and mobile nav panel; clipping them here makes those
+   panels invisible even though they still "open" in the DOM. */
 html, body { overflow-x: hidden; max-width: 100%; }
-.navbar, .navbar-inner { overflow: hidden; }
+.navbar-inner { min-width: 0; }
 .navbar-right { min-width: 0; }
 
 @media (max-width: 860px) {
@@ -419,8 +423,9 @@ html, body { overflow-x: hidden; max-width: 100%; }
   .profile-caret { display: none; }
   .brand-name { font-size: .74rem; }
   .navbar-brand img { width: 32px; height: 32px; }
-  .notif-dropdown { width: 280px; right: -60px; }
+  .notif-dropdown { width: min(280px, calc(100vw - 24px)); right: 0; }
   .notif-dropdown::before { content: none; }
+  .dropdown-menu { min-width: min(230px, calc(100vw - 24px)); }
 }
 
 /* Below this width, the icon row alone (hamburger + logo + search + bell

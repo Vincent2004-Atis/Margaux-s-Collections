@@ -13,6 +13,13 @@ $stmt->close();
 
 // Fetch the actual products bought per order, so the customer can see what
 // they ordered without having to open each order separately.
+//
+// FIX: this was an INNER JOIN against products, which silently hid every
+// item whose product had since been deleted (and, combined with a
+// checkout.php bug that didn't check insert errors, also hid items from
+// orders where the order_items insert itself had failed). Switched to a
+// LEFT JOIN so an order's items always show up, with a fallback label
+// for anything that no longer has a matching product row.
 $itemsByOrder = [];
 if (!empty($allOrders)) {
     $orderIds = array_column($allOrders, 'order_id');
@@ -22,7 +29,7 @@ if (!empty($allOrders)) {
     $itemStmt = $db->prepare("
         SELECT oi.order_id, oi.quantity, oi.price, p.product_name, p.image
         FROM order_items oi
-        JOIN products p ON p.product_id = oi.product_id
+        LEFT JOIN products p ON p.product_id = oi.product_id
         WHERE oi.order_id IN ($placeholders)
         ORDER BY oi.order_id
     ");
@@ -80,7 +87,7 @@ $tabs = [
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Order History — Margaux Collections</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -306,6 +313,10 @@ tbody tr:hover td { background: rgba(196,80,100,.05) !important; }
   display: flex !important; flex-direction: column !important; gap: 8px !important;
   min-width: 180px !important;
 }
+.items-empty {
+  font-size: .82rem !important; color: #5a4048 !important; font-style: italic !important;
+  -webkit-text-fill-color: #5a4048 !important;
+}
 .items-row {
   display: flex !important; align-items: center !important; gap: 8px !important;
 }
@@ -319,6 +330,10 @@ tbody tr:hover td { background: rgba(196,80,100,.05) !important; }
   font-size: .86rem !important; color: #d8bcc0 !important;
   -webkit-text-fill-color: #d8bcc0 !important;
   line-height: 1.3 !important;
+}
+.items-name.missing {
+  color: #7a6058 !important; font-style: italic !important;
+  -webkit-text-fill-color: #7a6058 !important;
 }
 .items-qty {
   color: #7a6058 !important; font-size: .8rem !important;
@@ -477,20 +492,37 @@ tbody tr:hover td { background: rgba(196,80,100,.05) !important; }
                 'pending_verification' => 'For Verification',
                 default                => ucfirst($o['payment_status'])
               };
+              $orderItems = $itemsByOrder[$o['order_id']] ?? [];
             ?>
             <tr>
               <td class="col-date"><?= date('M d, Y g:i A', strtotime($o['order_date'])) ?></td>
               <td>
+                <?php if (empty($orderItems)): ?>
+                  <div class="items-empty">No item details recorded for this order.</div>
+                <?php else: ?>
                 <div class="items-list">
-                  <?php foreach (($itemsByOrder[$o['order_id']] ?? []) as $it): ?>
+                  <?php foreach ($orderItems as $it):
+                    $hasProduct = !empty($it['product_name']);
+                  ?>
                   <div class="items-row">
+                    <?php if ($hasProduct): ?>
                     <img src="../<?= htmlspecialchars($it['image']) ?>"
                          alt="<?= htmlspecialchars($it['product_name']) ?>"
                          onerror="this.src='../images/product-placeholder.jpg'">
-                    <span class="items-name"><?= htmlspecialchars($it['product_name']) ?> <span class="items-qty">×<?= (int)$it['quantity'] ?></span></span>
+                    <span class="items-name">
+                      <?= htmlspecialchars($it['product_name']) ?>
+                      <span class="items-qty">×<?= (int)$it['quantity'] ?></span>
+                    </span>
+                    <?php else: ?>
+                    <span class="items-name missing">
+                      Product no longer available
+                      <span class="items-qty">×<?= (int)$it['quantity'] ?></span>
+                    </span>
+                    <?php endif; ?>
                   </div>
                   <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
               </td>
               <td><?= $orderMethodIcons[$o['order_method']] ?? htmlspecialchars($o['order_method']) ?></td>
               <td><?= $payIcons[$o['payment_method']] ?? htmlspecialchars($o['payment_method']) ?></td>

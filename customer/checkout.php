@@ -57,21 +57,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $res = $db->query("SELECT IFNULL(MAX(queue_number),100)+1 AS next_q FROM orders");
             $queueNum = (int)$res->fetch_assoc()['next_q'];
+
             $s = $db->prepare("INSERT INTO orders (user_id,customer_name,address,contact_number,order_method,payment_method,payment_account_id,payment_status,gcash_reference,queue_number,total_amount,order_status,latitude,longitude) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $payStatus   = ($payment === 'gcash') ? 'pending_verification' : 'pending';
             $orderStatus = 'pending';
             $gcashRefVal = ($payment === 'gcash') ? $gcashRef : null;
             $s->bind_param('isssssissidsdd', $userId, $name, $address, $contact, $method, $payment, $accId, $payStatus, $gcashRefVal, $queueNum, $total, $orderStatus, $latitude, $longitude);
-            $s->execute();
+
+            // FIX: execute() failures were previously silent — a bad insert
+            // here would leave $orderId unset/wrong but the code would carry
+            // on and still commit. Throwing on failure lets the existing
+            // catch block roll the whole transaction back instead.
+            if (!$s->execute()) {
+                throw new Exception('Could not save the order record: ' . $s->error);
+            }
             $orderId = $db->insert_id;
             $s->close();
+
+            // FIX: this is the insert that was silently failing for some
+            // orders, leaving them with a blank "Items" column in Order
+            // History. Each execute() is now checked — any failure aborts
+            // the whole order (rollback) instead of leaving an order row
+            // with no matching order_items rows.
             $s = $db->prepare("INSERT INTO order_items (order_id,product_id,quantity,price) VALUES (?,?,?,?)");
             foreach ($cart as $pid => $item) {
-                $s->bind_param('iiid', $orderId, $pid, $item['qty'], $item['price']);
-                $s->execute();
-                $db->query("UPDATE products SET stock=stock-".(int)$item['qty']." WHERE product_id=".(int)$pid." AND stock>=".(int)$item['qty']);
+                $pid = (int)$pid;
+                $qty = (int)$item['qty'];
+                $price = (float)$item['price'];
+                $s->bind_param('iiid', $orderId, $pid, $qty, $price);
+                if (!$s->execute()) {
+                    throw new Exception('Could not save order item (product #' . $pid . '): ' . $s->error);
+                }
+                $stockUpdate = $db->prepare("UPDATE products SET stock = stock - ? WHERE product_id = ? AND stock >= ?");
+                $stockUpdate->bind_param('iii', $qty, $pid, $qty);
+                if (!$stockUpdate->execute()) {
+                    throw new Exception('Could not update stock for product #' . $pid . ': ' . $stockUpdate->error);
+                }
+                $stockUpdate->close();
             }
             $s->close();
+
             $db->commit();
             $_SESSION['cart'] = [];
             header("Location: order_confirmation.php?order_id=$orderId");
@@ -87,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Checkout — Margaux Collections</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1033,12 +1058,6 @@ const GCASH_NUMBER      = '09482841494';
 const gcashModalOverlay = document.getElementById('gcashModalOverlay');
 let qrGenerated    = false;
 
-// FIX: Uses your actual GCash Personal QR (static image saved in ../images/)
-// instead of a hosted "generate QR from text" API. The old version encoded
-// the plain mobile number as a generic QR — that is NOT a valid EMV/InstaPay
-// payload, so GCash's scanner correctly rejected it as "not supported."
-// A real GCash QR (with the InstaPay logo, exported from your app) already
-// contains the correct structured payload, so we just display it as-is.
 function generateQR() {
   if (qrGenerated) return;
   qrGenerated = true;
@@ -1051,13 +1070,10 @@ function generateQR() {
   img.onerror = () => { img.style.display = 'none';  fallback.style.display = 'block';
     console.error('GCash QR image failed to load — check that ../images/gcash_qr.png exists.'); };
 
-  // Static QR image path — update this if you save the file elsewhere
   img.src = '../images/gcash_qr.png';
 }
 
 function openGcashModal() {
-  // Show the modal FIRST, regardless of whether QR generation succeeds —
-  // that way a QR-loading hiccup never blocks the popup itself.
   gcashModalOverlay.classList.add('active');
   try {
     generateQR();
@@ -1089,7 +1105,6 @@ function confirmGcashPaid() {
   }
   refError.style.display = 'none';
 
-  // Inject the reference number into the main form as a hidden field
   let hidden = document.getElementById('gcashReferenceHidden');
   if (!hidden) {
     hidden = document.createElement('input');

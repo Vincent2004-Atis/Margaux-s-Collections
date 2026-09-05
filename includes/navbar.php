@@ -399,25 +399,47 @@ $isOrderActive    = $currentPage === 'my_orders.php';
 /* ══════════════════════════════════════
    RESPONSIVE — MOBILE
 ══════════════════════════════════════ */
+/* Safety net: never let the navbar row force the page to scroll sideways */
+html, body { overflow-x: hidden; max-width: 100%; }
+.navbar, .navbar-inner { overflow: hidden; }
+.navbar-right { min-width: 0; }
+
 @media (max-width: 860px) {
-  .navbar-inner { padding: 0 14px; gap: 6px; }
+  .navbar-inner { padding: 0 12px; gap: 4px; }
   .navbar-nav { display: none; }
-  .navbar-hamburger { display: flex; }
+  .navbar-hamburger { display: flex; flex-shrink: 0; }
   .navbar-search { display: none; }
-  .search-toggle-btn { display: flex; }
-  .navbar-right { gap: 6px; }
-  .cart-btn { padding: 8px 10px; }
+  .search-toggle-btn { display: flex; flex-shrink: 0; }
+  .navbar-right { gap: 4px; flex-shrink: 0; }
+  .navbar-brand { min-width: 0; gap: 8px; }
+  .cart-btn { padding: 7px 9px; flex-shrink: 0; }
   .cart-label { display: none; }
-  .profile-btn { padding: 6px 8px; }
+  .profile-btn { padding: 5px 6px; flex-shrink: 0; }
   .profile-info { display: none; }
   .profile-caret { display: none; }
-  .brand-name { font-size: .76rem; }
-  .navbar-brand img { width: 34px; height: 34px; }
+  .brand-name { font-size: .74rem; }
+  .navbar-brand img { width: 32px; height: 32px; }
   .notif-dropdown { width: 280px; right: -60px; }
   .notif-dropdown::before { content: none; }
 }
-@media (max-width: 380px) {
+
+/* Below this width, the icon row alone (hamburger + logo + search + bell
+   + cart + avatar) is already tight — drop the brand name text so the
+   row always fits without pushing the avatar off-screen. */
+@media (max-width: 560px) {
   .brand-text { display: none; }
+}
+
+/* Extra-small phones: shrink every icon button a bit more */
+@media (max-width: 360px) {
+  .navbar-inner { padding: 0 8px; gap: 3px; }
+  .navbar-right { gap: 3px; }
+  .navbar-hamburger, .search-toggle-btn { width: 34px; height: 34px; font-size: .95rem; }
+  .notif-bell { padding: 7px 9px; font-size: 1rem; }
+  .cart-btn { padding: 6px 8px; }
+  .profile-btn { padding: 4px 5px; }
+  .profile-avatar { width: 26px; height: 26px; font-size: .72rem; }
+  .navbar-brand img { width: 28px; height: 28px; }
 }
 </style>
 

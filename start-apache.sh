@@ -13,4 +13,13 @@ mkdir -p /var/www/html/Margaux_Collections/images/homepage
 chown -R www-data:www-data /var/www/html/Margaux_Collections/images
 chmod -R 755 /var/www/html/Margaux_Collections/images
 
+   mkdir -p /var/www/html/Margaux_Collections/images/products
+   mkdir -p /var/www/html/Margaux_Collections/images/homepage
+   chown -R www-data:www-data /var/www/html/Margaux_Collections/images
+   chmod -R 755 /var/www/html/Margaux_Collections/images
+   if [ ! -f /var/www/html/Margaux_Collections/images/logo.jpg ]; then
+     cp /var/www/html/Margaux_Collections/assets-backup/logo.jpg /var/www/html/Margaux_Collections/images/logo.jpg
+     chown www-data:www-data /var/www/html/Margaux_Collections/images/logo.jpg
+   fi
+
 exec apache2-foreground

@@ -38,7 +38,7 @@ $revRows = safeQuery($db, "
 ");
 
 $topProducts = safeQuery($db, "
-    SELECT p.product_name, p.product_type,
+    SELECT p.product_name, p.condition_type,
            SUM(oi.quantity) AS sold,
            SUM(oi.quantity*oi.price) AS revenue
     FROM order_items oi
@@ -163,12 +163,13 @@ $slowMoving = safeQuery($db, "
 
 // ─── PRESCRIPTIVE ─────────────────────────────────────────────────────────────
 $pricingCandidates = safeQuery($db, "
-   SELECT p.product_name, p.condition_type,
-       SUM(oi.quantity) AS sold,
-       SUM(oi.quantity*oi.price) AS revenue
-FROM order_items oi
-JOIN products p ON p.product_id=oi.product_id
-GROUP BY oi.product_id ORDER BY sold DESC LIMIT 10
+    SELECT p.product_name, p.condition_type,
+           SUM(oi.quantity) AS sold,
+           SUM(oi.quantity * oi.price) AS revenue,
+           AVG(oi.price) AS avg_price
+    FROM order_items oi
+    JOIN products p ON p.product_id = oi.product_id
+    GROUP BY oi.product_id ORDER BY revenue DESC LIMIT 6
 ");
 
 $churnHighRisk      = array_filter($churnRisk, fn($r) => ($r['days_since'] ?? 999) >= 30);
@@ -768,7 +769,7 @@ $ordDelta   = $prevOrders  > 0 ? round((($totalOrders  - $prevOrders)  / $prevOr
               <tr>
                 <td><span class="rank-badge" style="background:<?= $rankBg ?>;color:<?= $rankTextColor ?>"><?= $i+1 ?></span></td>
                 <td><strong style="color:var(--navy);"><?= htmlspecialchars($p['product_name']) ?></strong></td>
-                <td><span class="pill pill-blue"><?= ucfirst($p['product_type']) ?></span></td>
+                <td><span class="pill pill-blue"><?= $p['condition_type']==='preloved' ? 'Preloved' : 'Brand New' ?></span></td>
                 <td><?= (int)$p['sold'] ?> units</td>
                 <td><strong style="color:#16a34a;">₱<?= number_format((float)$p['revenue'],2) ?></strong></td>
                 <td style="min-width:130px;">

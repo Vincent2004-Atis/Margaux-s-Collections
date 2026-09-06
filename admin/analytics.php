@@ -163,13 +163,12 @@ $slowMoving = safeQuery($db, "
 
 // ─── PRESCRIPTIVE ─────────────────────────────────────────────────────────────
 $pricingCandidates = safeQuery($db, "
-    SELECT p.product_name, p.product_type,
-           SUM(oi.quantity) AS sold,
-           SUM(oi.quantity * oi.price) AS revenue,
-           AVG(oi.price) AS avg_price
-    FROM order_items oi
-    JOIN products p ON p.product_id = oi.product_id
-    GROUP BY oi.product_id ORDER BY revenue DESC LIMIT 6
+   SELECT p.product_name, p.condition_type,
+       SUM(oi.quantity) AS sold,
+       SUM(oi.quantity*oi.price) AS revenue
+FROM order_items oi
+JOIN products p ON p.product_id=oi.product_id
+GROUP BY oi.product_id ORDER BY sold DESC LIMIT 10
 ");
 
 $churnHighRisk      = array_filter($churnRisk, fn($r) => ($r['days_since'] ?? 999) >= 30);

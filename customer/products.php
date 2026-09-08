@@ -521,7 +521,7 @@ footer a:hover { color: #e8a0a8 !important; padding-left: 4px !important; }
   .filter-tab { font-size:.62rem !important; padding:8px 14px !important; }
 }
 @media(max-width:480px){
-  .product-grid { grid-template-columns:1fr !important; }
+  .product-grid { grid-template-columns:1fr 1fr !important; gap:10px !important; }
 }
 </style>
 </head>

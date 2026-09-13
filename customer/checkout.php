@@ -1054,7 +1054,7 @@ function confirmReview() {
 }
 
 // ── GCash Payment Popup ──────────────────────────
-const GCASH_NUMBER      = '09482841494';
+const GCASH_NUMBER      = '09694311798';
 const gcashModalOverlay = document.getElementById('gcashModalOverlay');
 let qrGenerated    = false;
 

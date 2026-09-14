@@ -100,45 +100,6 @@ $products = $db->query("SELECT p.*, c.name AS category_name FROM products p LEFT
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Manage Products — Margaux Collections Admin</title>
 <link rel="stylesheet" href="../css/admin.css">
-<style>
-/* Responsive card-style table for mobile — no horizontal scroll needed */
-@media (max-width: 768px) {
-  .table-wrap { overflow-x: visible; }
-  .table-wrap table,
-  .table-wrap thead,
-  .table-wrap tbody,
-  .table-wrap tr,
-  .table-wrap td { display: block; width: 100%; }
-  .table-wrap thead { display: none; }
-  .table-wrap tr {
-    margin-bottom: 14px;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 10px;
-    padding: 12px 14px;
-    background: rgba(255,255,255,.02);
-  }
-  .table-wrap td {
-    border: none;
-    padding: 6px 0;
-    text-align: left;
-  }
-  .table-wrap td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    font-size: .68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--text-3);
-    margin-bottom: 3px;
-  }
-  .table-wrap td[data-label="Image"] { text-align: center; }
-  .table-wrap td[data-label="Image"]::before { display: none; }
-  .table-wrap td[data-label="Image"] img { width: 90px; height: 90px; }
-  .table-wrap td[data-label="Name"] div[style*="max-width"] { max-width: 100% !important; white-space: normal !important; }
-  .table-wrap .action-btns { justify-content: flex-start; flex-wrap: wrap; }
-}
-</style>
 </head>
 <body>
 <div class="admin-layout">
@@ -160,19 +121,19 @@ $products = $db->query("SELECT p.*, c.name AS category_name FROM products p LEFT
             <tbody>
               <?php foreach ($products as $p): ?>
               <tr>
-                <td data-label="Image"><img src="../<?= e($p['image']) ?>" style="width:52px;height:52px;object-fit:cover;border-radius:8px;" onerror="this.src='../images/product-placeholder.jpg'"></td>
-                <td data-label="Name"><div style="font-weight:600;"><?= e($p['product_name']) ?></div><div style="font-size:.75rem;color:var(--text-3);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= e($p['description']) ?></div></td>
-                <td data-label="Category"><?= e($p['category_name'] ?? '—') ?></td>
-                <td data-label="Condition">
+                <td><img src="../<?= e($p['image']) ?>" style="width:52px;height:52px;object-fit:cover;border-radius:8px;" onerror="this.src='../images/product-placeholder.jpg'"></td>
+                <td><div style="font-weight:600;"><?= e($p['product_name']) ?></div><div style="font-size:.75rem;color:var(--text-3);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= e($p['description']) ?></div></td>
+                <td><?= e($p['category_name'] ?? '—') ?></td>
+                <td>
                   <?php if ($p['condition_type']==='preloved'): ?>
                     <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;background:rgba(180,83,9,.12);color:#b45309;">Preloved</span>
                   <?php else: ?>
                     <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;background:rgba(21,128,61,.12);color:#15803d;">New</span>
                   <?php endif; ?>
                 </td>
-                <td data-label="Price"><strong>₱<?= number_format((float)$p['price'],2) ?></strong></td>
-                <td data-label="Stock"><?= ($p['stock'] <= 10) ? '<span style="color:var(--red);font-weight:700;">'.(int)$p['stock'].'</span>' : (int)$p['stock'] ?></td>
-                <td data-label="Actions">
+                <td><strong>₱<?= number_format((float)$p['price'],2) ?></strong></td>
+                <td><?= ($p['stock'] <= 10) ? '<span style="color:var(--red);font-weight:700;">'.(int)$p['stock'].'</span>' : (int)$p['stock'] ?></td>
+                <td>
                   <div class="action-btns">
                     <button class="btn btn-outline btn-sm" onclick='openEdit(<?= htmlspecialchars(json_encode($p), ENT_QUOTES) ?>)'>✏️ Edit</button>
                     <form method="POST" action="manage_products.php" style="display:inline"

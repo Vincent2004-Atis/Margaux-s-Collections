@@ -12,6 +12,11 @@ RUN apache2ctl -M
 # (mirrors exactly where it lives inside XAMPP's htdocs)
 COPY . /var/www/html/Margaux_Collections/
 
+# Increase PHP upload limits (default 2M/8M is too small for mobile camera
+# photos). php:*-apache uses mod_php, which does NOT read .user.ini — a
+# .ini file must be dropped into conf.d instead.
+COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 # Serve the app directly at the bare domain root, AND keep every existing
 # "/Margaux_Collections/..." absolute path working via an Alias, so no PHP
 # code needs to change.

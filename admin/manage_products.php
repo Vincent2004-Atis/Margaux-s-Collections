@@ -100,6 +100,19 @@ $products = $db->query("SELECT p.*, c.name AS category_name FROM products p LEFT
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Manage Products — Margaux Collections Admin</title>
 <link rel="stylesheet" href="../css/admin.css">
+<style>
+/* Zoom the whole table out on mobile so every column fits on screen —
+   no horizontal scrolling needed. Adjust the 0.62 value below if you
+   want it smaller/bigger (lower number = more zoomed out). */
+@media (max-width: 768px) {
+  .table-wrap { overflow-x: hidden; }
+  .table-wrap table {
+    transform: scale(0.62);
+    transform-origin: top left;
+    width: calc(100% / 0.62);
+  }
+}
+</style>
 </head>
 <body>
 <div class="admin-layout">
